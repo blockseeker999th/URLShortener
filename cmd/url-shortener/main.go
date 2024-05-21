@@ -3,6 +3,7 @@ package main
 import (
 	"URLShortener/internal/config"
 	"URLShortener/internal/lib/logger/sl"
+	"URLShortener/internal/server/handlers/deleteurl"
 	"URLShortener/internal/server/handlers/redirect"
 	"URLShortener/internal/server/handlers/save"
 	mwLogger "URLShortener/internal/server/middleware/logger"
@@ -46,6 +47,7 @@ func main() {
 
 	router.Post("/url", save.New(log, st))
 	router.Get("/{alias}", redirect.New(log, st))
+	router.Delete("/url/{alias}", deleteurl.New(log, st))
 
 	log.Info("starting server", slog.String("address", cfg.HTTPServer.Address))
 
