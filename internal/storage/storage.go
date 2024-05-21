@@ -23,7 +23,7 @@ func NewStorage(db *sql.DB) *Storage {
 func (s *Storage) SaveURL(urlToSave string, alias string) (*int64, error) {
 	const op = "storage.saveURL"
 
-	qRes, err := s.db.Prepare(`INSERT INTO url (url, alias) VALUES ($1, $2) RETURNING id`)
+	qRes, err := s.db.Prepare(`INSERT INTO url (fullurl, alias) VALUES ($1, $2) RETURNING id`)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -34,10 +34,6 @@ func (s *Storage) SaveURL(urlToSave string, alias string) (*int64, error) {
 	err = qRes.QueryRow(urlToSave, alias).Scan(&id)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("%s: failed to get last insert id: %s", op, err)
 	}
 
 	return id, nil
