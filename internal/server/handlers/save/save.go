@@ -20,7 +20,7 @@ type Request struct {
 }
 
 type Response struct {
-	Status string `json:"status"`
+	Status int    `json:"status"`
 	Error  string `json:"error,omitempty"`
 	Alias  string `json:"alias,omitempty"`
 }
@@ -47,7 +47,7 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 			log.Error("failer to decode request body", sl.Err(err))
 
 			render.JSON(w, r, Response{
-				Status: "error",
+				Status: http.StatusBadRequest,
 				Error:  "failed to decode request",
 			})
 
@@ -63,7 +63,7 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 			log.Error("invalid request", sl.Err(validateErr))
 
 			render.JSON(w, r, Response{
-				Status: "error",
+				Status: http.StatusBadRequest,
 				Error:  "Validation error",
 			})
 
@@ -85,7 +85,7 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 			log.Info("url already exists", slog.String("url", req.URL))
 
 			render.JSON(w, r, Response{
-				Status: "Info",
+				Status: http.StatusForbidden,
 				Error:  "url already exists",
 			})
 
@@ -96,7 +96,7 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 			log.Error("error saving url", sl.Err(err))
 
 			render.JSON(w, r, Response{
-				Status: "error",
+				Status: http.StatusInternalServerError,
 				Error:  "error saving url",
 			})
 
@@ -105,7 +105,7 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 
 		log.Info("url successfully added ", slog.Int64("id", *id))
 		render.JSON(w, r, Response{
-			Status: "OK",
+			Status: http.StatusOK,
 			Alias:  alias,
 		})
 	}
