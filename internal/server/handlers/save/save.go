@@ -5,7 +5,6 @@ import (
 	"URLShortener/internal/lib/random"
 	"URLShortener/internal/storage"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -56,7 +55,6 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 
 		log.Info("request body decoded", slog.Any("request", req))
 
-		fmt.Println("REQ: ", req)
 		if err := validator.New().Struct(req); err != nil {
 			validateErr := err.(validator.ValidationErrors)
 

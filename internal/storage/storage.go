@@ -65,20 +65,19 @@ func (s *Storage) GetURL(alias string) (*models.URL, error) {
 func (s *Storage) DeleteURL(alias string) error {
 	const op = "storage.deleteURL"
 
-	qRes, err := s.db.Prepare(`DELETE fullurl FROM url WHERE alias=$1`)
+	qRes, err := s.db.Exec(`DELETE FROM url WHERE alias=$1`, alias)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	defer qRes.Close()
+	rowsAffected, err := qRes.RowsAffected()
 
-	_, err = qRes.Exec(alias)
-	if errors.Is(err, sql.ErrNoRows) {
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	if rowsAffected == 0 {
 		return ErrURLNotFound
-	}
-
-	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
 	}
 
 	return nil
