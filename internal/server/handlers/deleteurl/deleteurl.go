@@ -1,10 +1,9 @@
-package redirect
+package deleteurl
 
 import (
 	logwith "URLShortener/internal/lib/logger/logWith"
 	"URLShortener/internal/lib/logger/sl"
 	"URLShortener/internal/storage"
-	"URLShortener/models"
 	"URLShortener/validation"
 	"errors"
 	"log/slog"
@@ -15,28 +14,29 @@ import (
 )
 
 type Request struct {
-	alias string `validate:"required"`
+	alias string `validate:"required,alias"`
 }
 
 type Response struct {
-	Status int        `json:"status"`
-	Error  string     `json:"error,omitempty"`
-	URL    models.URL `json:"alias,omitempty"`
+	Status int    `json:"status"`
+	Error  string `json:"error,omitempty"`
 }
 
-type URLGetter interface {
-	GetURL(alias string) (*models.URL, error)
+type URLRemover interface {
+	DeleteURL(alias string, userId string) error
 }
 
-func New(log *slog.Logger, urlGetter URLGetter) http.HandlerFunc {
+func New(log *slog.Logger, urldelete URLRemover) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.redirect.New"
+		const op = "handlers.deleteurl.New"
 
 		log = logwith.LogWith(log, op, r)
 
-		aliasReq := Request{alias: chi.URLParam(r, "alias")}
+		userId := r.Context().Value("userId").(string)
 
-		if err := validation.ValidationStruct(aliasReq); err != nil {
+		req := Request{alias: chi.URLParam(r, "alias")}
+
+		if err := validation.ValidationStruct(req); err != nil {
 
 			log.Error(storage.ErrInvalidRequest, sl.Err(err))
 
@@ -48,9 +48,9 @@ func New(log *slog.Logger, urlGetter URLGetter) http.HandlerFunc {
 			return
 		}
 
-		res, err := urlGetter.GetURL(aliasReq.alias)
+		err := urldelete.DeleteURL(req.alias, userId)
 		if errors.Is(err, storage.ErrURLNotFound) {
-			log.Info(storage.ErrURLNotFound.Error(), slog.String("alias", aliasReq.alias))
+			log.Info(storage.ErrURLNotFound.Error(), slog.String("alias", req.alias))
 
 			render.JSON(w, r, Response{
 				Status: http.StatusNotFound,
@@ -61,18 +61,20 @@ func New(log *slog.Logger, urlGetter URLGetter) http.HandlerFunc {
 		}
 
 		if err != nil {
-			log.Error(storage.ErrFailedToGetURL, "alias", sl.Err(err))
+			log.Error(storage.ErrDeletingURL, sl.Err(err))
 
 			render.JSON(w, r, Response{
 				Status: http.StatusInternalServerError,
-				Error:  storage.ErrFailedToGetURL,
+				Error:  storage.ErrDeletingURL,
 			})
 
 			return
 		}
 
-		log.Info("got url", slog.String("url", res.Url))
+		log.Info("successfully deleted url", slog.String("alias", req.alias))
 
-		http.Redirect(w, r, res.Url, http.StatusFound)
+		render.JSON(w, r, Response{
+			Status: http.StatusOK,
+		})
 	}
 }

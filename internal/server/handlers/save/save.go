@@ -1,17 +1,16 @@
 package save
 
 import (
+	logwith "URLShortener/internal/lib/logger/logWith"
 	"URLShortener/internal/lib/logger/sl"
 	"URLShortener/internal/lib/random"
 	"URLShortener/internal/storage"
+	"URLShortener/validation"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
-	"github.com/go-playground/validator/v10"
 )
 
 type Request struct {
@@ -26,7 +25,7 @@ type Response struct {
 }
 
 type URLSaver interface {
-	SaveURL(urlToSave string, alias string) (*int64, error)
+	SaveURL(urlToSave string, alias string, userId string) (*int64, error)
 	GetDuplicateAliasCheck(alias string) error
 }
 
@@ -36,19 +35,18 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.save.New"
 
-		log = log.With(
-			slog.String("op", op),
-			slog.String("request_id", middleware.GetReqID(r.Context())),
-		)
+		log = logwith.LogWith(log, op, r)
+
+		userId := r.Context().Value("userId").(string)
 
 		var req Request
 		err := render.DecodeJSON(r.Body, &req)
 		if err != nil {
-			log.Error("failer to decode request body", sl.Err(err))
+			log.Error(storage.ErrFailedToDecode, sl.Err(err))
 
 			render.JSON(w, r, Response{
 				Status: http.StatusBadRequest,
-				Error:  "failed to decode request",
+				Error:  storage.ErrFailedToDecode,
 			})
 
 			return
@@ -56,15 +54,13 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 
 		log.Info("request body decoded", slog.Any("request", req))
 
-		fmt.Println("REQ: ", req)
-		if err := validator.New().Struct(req); err != nil {
-			validateErr := err.(validator.ValidationErrors)
+		if err := validation.ValidationStruct(req); err != nil {
 
-			log.Error("invalid request", sl.Err(validateErr))
+			log.Error(storage.ErrInvalidRequest, sl.Err(err))
 
 			render.JSON(w, r, Response{
 				Status: http.StatusBadRequest,
-				Error:  "Validation error",
+				Error:  storage.ErrValidation,
 			})
 
 			return
@@ -80,24 +76,24 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 			}
 		}
 
-		id, err := urlSaver.SaveURL(req.URL, alias)
+		id, err := urlSaver.SaveURL(req.URL, alias, userId)
 		if errors.Is(err, storage.ErrURLExists) {
-			log.Info("url already exists", slog.String("url", req.URL))
+			log.Info(storage.ErrURLExists.Error(), slog.String("url", req.URL))
 
 			render.JSON(w, r, Response{
 				Status: http.StatusForbidden,
-				Error:  "url already exists",
+				Error:  storage.ErrURLExists.Error(),
 			})
 
 			return
 		}
 
 		if err != nil {
-			log.Error("error saving url", sl.Err(err))
+			log.Error(storage.ErrSavingURL, sl.Err(err))
 
 			render.JSON(w, r, Response{
 				Status: http.StatusInternalServerError,
-				Error:  "error saving url",
+				Error:  storage.ErrSavingURL,
 			})
 
 			return
@@ -105,7 +101,7 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 
 		log.Info("url successfully added ", slog.Int64("id", *id))
 		render.JSON(w, r, Response{
-			Status: http.StatusOK,
+			Status: http.StatusCreated,
 			Alias:  alias,
 		})
 	}

@@ -1,8 +1,11 @@
 package main
 
 import (
+	"URLShortener/auth"
 	"URLShortener/internal/config"
 	"URLShortener/internal/lib/logger/sl"
+	"URLShortener/internal/server/handlers/authhandle"
+	"URLShortener/internal/server/handlers/deleteurl"
 	"URLShortener/internal/server/handlers/redirect"
 	"URLShortener/internal/server/handlers/save"
 	mwLogger "URLShortener/internal/server/middleware/logger"
@@ -14,6 +17,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+)
+
+const (
+	SIGNIN = "login"
+	SIGNUP = "register"
 )
 
 func main() {
@@ -44,8 +52,14 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
-	router.Post("/url", save.New(log, st))
+	router.Post("/url", auth.WithAuth(save.New(log, st)))
 	router.Get("/{alias}", redirect.New(log, st))
+	router.Delete("/url/{alias}", auth.WithAuth(deleteurl.New(log, st)))
+
+	router.Route("/users", func(r chi.Router) {
+		r.Post("/signup", authhandle.New(log, st, SIGNUP))
+		r.Post("/signin", authhandle.New(log, st, SIGNIN))
+	})
 
 	log.Info("starting server", slog.String("address", cfg.HTTPServer.Address))
 
