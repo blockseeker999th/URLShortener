@@ -1,0 +1,202 @@
+package authhandle
+
+import (
+	"URLShortener/auth"
+	logwith "URLShortener/internal/lib/logger/logWith"
+	"URLShortener/internal/lib/logger/sl"
+	"URLShortener/internal/storage"
+	"URLShortener/models"
+	"URLShortener/validation"
+	"log/slog"
+	"net/http"
+
+	"github.com/go-chi/render"
+	"golang.org/x/crypto/bcrypt"
+)
+
+type Response struct {
+	Status int    `json:"status"`
+	Error  string `json:"error,omitempty"`
+	Token  string `json:"token,omitempty"`
+}
+
+type AuthUser interface {
+	SignUpUser(*models.User) (*models.User, error)
+	SignInUser(loginData *models.LoginData) (*models.User, error)
+}
+
+func New(log *slog.Logger, authUser AuthUser, authType string) http.HandlerFunc {
+	switch authType {
+	case "register":
+		return func(w http.ResponseWriter, r *http.Request) {
+			const op = "handlers.authhandle.authHandle.New.SIGNUP"
+
+			if r.Method != http.MethodPost {
+				render.JSON(w, r, Response{
+					Status: http.StatusMethodNotAllowed,
+					Error:  storage.ErrMethodNotAllowed,
+				})
+			}
+
+			log = logwith.LogWith(log, op, r)
+
+			var user *models.User
+			err := render.DecodeJSON(r.Body, &user)
+
+			if err != nil {
+				log.Error(storage.ErrFailedToDecode, sl.Err(err))
+
+				render.JSON(w, r, Response{
+					Status: http.StatusBadRequest,
+					Error:  storage.ErrFailedToDecode,
+				})
+
+				return
+			}
+
+			log.Info("request body decoded", slog.Any("request", user))
+
+			hashedPassword, err := auth.HashPassword(user.Password)
+			if err != nil {
+				log.Error("failed to hash password", sl.Err(err))
+
+				render.JSON(w, r, Response{
+					Status: http.StatusInternalServerError,
+					Error:  "failed to hash password",
+				})
+
+				return
+			}
+
+			if err := validation.ValidationStruct(user); err != nil {
+
+				log.Error(storage.ErrValidation, sl.Err(err))
+
+				render.JSON(w, r, Response{
+					Status: http.StatusBadRequest,
+					Error:  storage.ErrValidation,
+				})
+
+				return
+			}
+
+			user.Password = hashedPassword
+
+			u, err := authUser.SignUpUser(user)
+			if err != nil {
+				log.Error(storage.ErrSignUp, sl.Err(err))
+
+				render.JSON(w, r, Response{
+					Status: http.StatusInternalServerError,
+					Error:  storage.ErrSignUp,
+				})
+
+				return
+			}
+
+			token, err := auth.CreateAndSetAuthCookie(u.Id, w)
+			if err != nil {
+				log.Error(storage.ErrCreatingSession, sl.Err(err))
+
+				render.JSON(w, r, Response{
+					Status: http.StatusInternalServerError,
+					Error:  storage.ErrCreatingSession,
+				})
+
+				return
+			}
+
+			log.Info("user successfulyy registered", slog.Int64("id", u.Id))
+
+			render.JSON(w, r, Response{
+				Status: http.StatusCreated,
+				Token:  token,
+			})
+		}
+
+	case "login":
+		return func(w http.ResponseWriter, r *http.Request) {
+			const op = "handlers.authhandle.authHandle.New.SIGNUP"
+
+			if r.Method != http.MethodPost {
+				render.JSON(w, r, Response{
+					Status: http.StatusMethodNotAllowed,
+					Error:  storage.ErrMethodNotAllowed,
+				})
+			}
+
+			log = logwith.LogWith(log, op, r)
+
+			var loginData *models.LoginData
+			err := render.DecodeJSON(r.Body, &loginData)
+
+			if err != nil {
+				log.Error(storage.ErrFailedToDecode, sl.Err(err))
+
+				render.JSON(w, r, Response{
+					Status: http.StatusBadRequest,
+					Error:  storage.ErrFailedToDecode,
+				})
+
+				return
+			}
+
+			log.Info("request body decoded", slog.Any("request", loginData))
+
+			if err := validation.ValidationStruct(loginData); err != nil {
+
+				log.Error(storage.ErrValidation, sl.Err(err))
+
+				render.JSON(w, r, Response{
+					Status: http.StatusBadRequest,
+					Error:  storage.ErrValidation,
+				})
+
+				return
+			}
+
+			user, err := authUser.SignInUser(loginData)
+			if err != nil {
+				log.Error(storage.ErrInvalidRequest, sl.Err(err))
+
+				render.JSON(w, r, Response{
+					Status: http.StatusBadRequest,
+					Error:  storage.ErrInvalidRequest,
+				})
+
+				return
+			}
+
+			err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginData.Password))
+			if err != nil {
+				log.Error(storage.ErrInvalidCredentials, sl.Err(err))
+
+				render.JSON(w, r, Response{
+					Status: http.StatusUnauthorized,
+					Error:  storage.ErrInvalidCredentials,
+				})
+
+				return
+			}
+
+			token, err := auth.CreateAndSetAuthCookie(user.Id, w)
+			if err != nil {
+				log.Error(storage.ErrCreatingSession, sl.Err(err))
+
+				render.JSON(w, r, Response{
+					Status: http.StatusInternalServerError,
+					Error:  storage.ErrCreatingSession,
+				})
+
+				return
+			}
+
+			render.JSON(w, r, Response{
+				Status: http.StatusOK,
+				Token:  token,
+			})
+		}
+	default:
+		return nil
+	}
+}

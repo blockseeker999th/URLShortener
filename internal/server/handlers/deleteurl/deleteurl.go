@@ -1,17 +1,16 @@
 package deleteurl
 
 import (
+	logwith "URLShortener/internal/lib/logger/logWith"
 	"URLShortener/internal/lib/logger/sl"
 	"URLShortener/internal/storage"
+	"URLShortener/validation"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
-	"github.com/go-playground/validator/v10"
 )
 
 type Request struct {
@@ -24,53 +23,49 @@ type Response struct {
 }
 
 type URLRemover interface {
-	DeleteURL(alias string) error
+	DeleteURL(alias string, userId string) error
 }
 
 func New(log *slog.Logger, urldelete URLRemover) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.deleteurl.New"
 
-		log = log.With(
-			slog.String("op", op),
-			slog.String("request_id", middleware.GetReqID(r.Context())),
-		)
+		log = logwith.LogWith(log, op, r)
+
+		userId := r.Context().Value("userId").(string)
 
 		req := Request{alias: chi.URLParam(r, "alias")}
 
-		fmt.Println("REQ: ", req)
+		if err := validation.ValidationStruct(req); err != nil {
 
-		if err := validator.New().Struct(req); err != nil {
-			validateErr := err.(validator.ValidationErrors)
-
-			log.Error("invalid request", sl.Err(validateErr))
+			log.Error(storage.ErrInvalidRequest, sl.Err(err))
 
 			render.JSON(w, r, Response{
 				Status: http.StatusBadRequest,
-				Error:  "Validation error",
+				Error:  storage.ErrValidation,
 			})
 
 			return
 		}
 
-		err := urldelete.DeleteURL(req.alias)
+		err := urldelete.DeleteURL(req.alias, userId)
 		if errors.Is(err, storage.ErrURLNotFound) {
-			log.Info("url not found", slog.String("alias", req.alias))
+			log.Info(storage.ErrURLNotFound.Error(), slog.String("alias", req.alias))
 
 			render.JSON(w, r, Response{
 				Status: http.StatusNotFound,
-				Error:  "URL not found",
+				Error:  storage.ErrURLNotFound.Error(),
 			})
 
 			return
 		}
 
 		if err != nil {
-			log.Error("error deleting url", sl.Err(err))
+			log.Error(storage.ErrDeletingURL, sl.Err(err))
 
 			render.JSON(w, r, Response{
 				Status: http.StatusInternalServerError,
-				Error:  "error deleting url",
+				Error:  storage.ErrDeletingURL,
 			})
 
 			return

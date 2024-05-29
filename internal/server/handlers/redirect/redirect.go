@@ -1,17 +1,17 @@
 package redirect
 
 import (
+	logwith "URLShortener/internal/lib/logger/logWith"
 	"URLShortener/internal/lib/logger/sl"
 	"URLShortener/internal/storage"
 	"URLShortener/models"
+	"URLShortener/validation"
 	"errors"
 	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
-	"github.com/go-playground/validator/v10"
 )
 
 type Request struct {
@@ -32,21 +32,17 @@ func New(log *slog.Logger, urlGetter URLGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.redirect.New"
 
-		log = log.With(
-			slog.String("op", op),
-			slog.String("request_id", middleware.GetReqID(r.Context())),
-		)
+		log = logwith.LogWith(log, op, r)
 
 		aliasReq := Request{alias: chi.URLParam(r, "alias")}
 
-		if err := validator.New().Struct(aliasReq); err != nil {
-			validateErr := err.(validator.ValidationErrors)
+		if err := validation.ValidationStruct(aliasReq); err != nil {
 
-			log.Error("invalid request", sl.Err(validateErr))
+			log.Error(storage.ErrInvalidRequest, sl.Err(err))
 
 			render.JSON(w, r, Response{
 				Status: http.StatusBadRequest,
-				Error:  "Validation error",
+				Error:  storage.ErrValidation,
 			})
 
 			return
@@ -54,22 +50,22 @@ func New(log *slog.Logger, urlGetter URLGetter) http.HandlerFunc {
 
 		res, err := urlGetter.GetURL(aliasReq.alias)
 		if errors.Is(err, storage.ErrURLNotFound) {
-			log.Info("url not found", slog.String("alias", aliasReq.alias))
+			log.Info(storage.ErrURLNotFound.Error(), slog.String("alias", aliasReq.alias))
 
 			render.JSON(w, r, Response{
 				Status: http.StatusNotFound,
-				Error:  "Not found",
+				Error:  storage.ErrURLNotFound.Error(),
 			})
 
 			return
 		}
 
 		if err != nil {
-			log.Error("failed to get url", "alias", sl.Err(err))
+			log.Error(storage.ErrFailedToGetURL, "alias", sl.Err(err))
 
 			render.JSON(w, r, Response{
 				Status: http.StatusInternalServerError,
-				Error:  "Failed to get URL",
+				Error:  storage.ErrFailedToGetURL,
 			})
 
 			return
