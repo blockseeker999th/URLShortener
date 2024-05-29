@@ -15,12 +15,13 @@ type HTTPServer struct {
 }
 
 type Config struct {
-	Env      string
-	Host     string
-	Port     string
-	User     string
-	Password string
-	DBName   string
+	Env       string
+	Host      string
+	Port      string
+	User      string
+	Password  string
+	DBName    string
+	JwtSecret string
 	*HTTPServer
 }
 
@@ -31,12 +32,13 @@ func MustLoad() *Config {
 	}
 
 	return &Config{
-		Env:      getEnv("ENV", "local"),
-		Host:     "db",
-		Port:     getEnv("PG_PORT", "5432"),
-		User:     getEnv("PG_USER", "default"),
-		Password: getEnv("PG_PASSWORD", "default"),
-		DBName:   getEnv("PG_DBNAME", "urlshortener"),
+		Env:       getEnv("ENV", "local"),
+		Host:      "db",
+		Port:      getEnv("PG_PORT", "5432"),
+		User:      getEnv("PG_USER", "default"),
+		Password:  getEnv("PG_PASSWORD", "default"),
+		DBName:    getEnv("PG_DBNAME", "urlshortener"),
+		JwtSecret: getEnv("JWT_SECRET", "localsecret"),
 		HTTPServer: &HTTPServer{
 			Address:     getEnv("SERVER_ADDRESS", ":3002"),
 			Timeout:     parseTime("SERVER_TIMEOUT", "4s"),
