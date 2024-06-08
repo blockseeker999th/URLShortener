@@ -1,9 +1,8 @@
 package deleteurl
 
 import (
-	logwith "URLShortener/internal/lib/logger/logWith"
-	"URLShortener/internal/lib/logger/sl"
 	"URLShortener/internal/storage"
+	logUtils "URLShortener/internal/utils/logger"
 	"URLShortener/validation"
 	"errors"
 	"log/slog"
@@ -30,7 +29,7 @@ func New(log *slog.Logger, urldelete URLRemover) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.deleteurl.New"
 
-		log = logwith.LogWith(log, op, r)
+		log = logUtils.LogWith(log, op, r)
 
 		userId := r.Context().Value("userId").(string)
 
@@ -38,7 +37,7 @@ func New(log *slog.Logger, urldelete URLRemover) http.HandlerFunc {
 
 		if err := validation.ValidationStruct(req); err != nil {
 
-			log.Error(storage.ErrInvalidRequest, sl.Err(err))
+			log.Error(storage.ErrInvalidRequest, logUtils.Err(err))
 
 			render.JSON(w, r, Response{
 				Status: http.StatusBadRequest,
@@ -61,7 +60,7 @@ func New(log *slog.Logger, urldelete URLRemover) http.HandlerFunc {
 		}
 
 		if err != nil {
-			log.Error(storage.ErrDeletingURL, sl.Err(err))
+			log.Error(storage.ErrDeletingURL, logUtils.Err(err))
 
 			render.JSON(w, r, Response{
 				Status: http.StatusInternalServerError,

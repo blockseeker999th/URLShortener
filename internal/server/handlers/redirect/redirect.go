@@ -1,9 +1,8 @@
 package redirect
 
 import (
-	logwith "URLShortener/internal/lib/logger/logWith"
-	"URLShortener/internal/lib/logger/sl"
 	"URLShortener/internal/storage"
+	logUtils "URLShortener/internal/utils/logger"
 	"URLShortener/models"
 	"URLShortener/validation"
 	"errors"
@@ -32,13 +31,13 @@ func New(log *slog.Logger, urlGetter URLGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.redirect.New"
 
-		log = logwith.LogWith(log, op, r)
+		log = logUtils.LogWith(log, op, r)
 
 		aliasReq := Request{alias: chi.URLParam(r, "alias")}
 
 		if err := validation.ValidationStruct(aliasReq); err != nil {
 
-			log.Error(storage.ErrInvalidRequest, sl.Err(err))
+			log.Error(storage.ErrInvalidRequest, logUtils.Err(err))
 
 			render.JSON(w, r, Response{
 				Status: http.StatusBadRequest,
@@ -61,7 +60,7 @@ func New(log *slog.Logger, urlGetter URLGetter) http.HandlerFunc {
 		}
 
 		if err != nil {
-			log.Error(storage.ErrFailedToGetURL, "alias", sl.Err(err))
+			log.Error(storage.ErrFailedToGetURL, "alias", logUtils.Err(err))
 
 			render.JSON(w, r, Response{
 				Status: http.StatusInternalServerError,
