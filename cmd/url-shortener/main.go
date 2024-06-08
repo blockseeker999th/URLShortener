@@ -3,7 +3,6 @@ package main
 import (
 	"URLShortener/auth"
 	"URLShortener/internal/config"
-	"URLShortener/internal/lib/logger/sl"
 	"URLShortener/internal/server/handlers/authhandle"
 	"URLShortener/internal/server/handlers/deleteurl"
 	"URLShortener/internal/server/handlers/redirect"
@@ -11,6 +10,7 @@ import (
 	mwLogger "URLShortener/internal/server/middleware/logger"
 	"URLShortener/internal/storage"
 	database "URLShortener/internal/storage/db"
+	logUtils "URLShortener/internal/utils/logger"
 	"log/slog"
 	"net/http"
 	"os"
@@ -35,7 +35,7 @@ func main() {
 	st := storage.NewStorage(db)
 
 	if err != nil {
-		log.Error("failed to init DB ", sl.Err(err))
+		log.Error("failed to init DB ", logUtils.Err(err))
 		return
 	}
 

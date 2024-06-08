@@ -1,10 +1,9 @@
 package save
 
 import (
-	logwith "URLShortener/internal/lib/logger/logWith"
-	"URLShortener/internal/lib/logger/sl"
-	"URLShortener/internal/lib/random"
 	"URLShortener/internal/storage"
+	"URLShortener/internal/utils"
+	logUtils "URLShortener/internal/utils/logger"
 	"URLShortener/validation"
 	"errors"
 	"log/slog"
@@ -35,14 +34,14 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.save.New"
 
-		log = logwith.LogWith(log, op, r)
+		log = logUtils.LogWith(log, op, r)
 
 		userId := r.Context().Value("userId").(string)
 
 		var req Request
 		err := render.DecodeJSON(r.Body, &req)
 		if err != nil {
-			log.Error(storage.ErrFailedToDecode, sl.Err(err))
+			log.Error(storage.ErrFailedToDecode, logUtils.Err(err))
 
 			render.JSON(w, r, Response{
 				Status: http.StatusBadRequest,
@@ -56,7 +55,7 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 
 		if err := validation.ValidationStruct(req); err != nil {
 
-			log.Error(storage.ErrInvalidRequest, sl.Err(err))
+			log.Error(storage.ErrInvalidRequest, logUtils.Err(err))
 
 			render.JSON(w, r, Response{
 				Status: http.StatusBadRequest,
@@ -68,7 +67,7 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 
 		alias := req.Alias
 		if alias == "" {
-			alias = random.CreateRandomString(aliasLength)
+			alias = utils.CreateRandomString(aliasLength)
 			err := urlSaver.GetDuplicateAliasCheck(alias)
 			if err != nil {
 				log.Info("alias already exists", slog.String("alias", req.Alias))
@@ -89,7 +88,7 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 		}
 
 		if err != nil {
-			log.Error(storage.ErrSavingURL, sl.Err(err))
+			log.Error(storage.ErrSavingURL, logUtils.Err(err))
 
 			render.JSON(w, r, Response{
 				Status: http.StatusInternalServerError,
