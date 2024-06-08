@@ -1,4 +1,4 @@
-module URLShortener
+module github.com/blockseeker999th/URLShortener
 
 go 1.22
 
