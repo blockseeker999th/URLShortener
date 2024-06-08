@@ -2,7 +2,7 @@ package auth
 
 import (
 	"URLShortener/internal/config"
-	"URLShortener/internal/lib/response"
+	logUtils "URLShortener/internal/utils"
 	"context"
 	"fmt"
 	"log/slog"
@@ -43,7 +43,7 @@ func WithAuth(handlerFunc http.HandlerFunc) http.HandlerFunc {
 }
 
 func permissionDenied(w http.ResponseWriter, r *http.Request) {
-	render.JSON(w, r, response.ResponseWithoutPayload(http.StatusUnauthorized, "permission denied"))
+	render.JSON(w, r, logUtils.ResponseWithoutPayload(http.StatusUnauthorized, "permission denied"))
 }
 
 func CreateJWT(secret []byte, userId int64) (string, error) {

@@ -1,4 +1,4 @@
-package logwith
+package logger
 
 import (
 	"log/slog"

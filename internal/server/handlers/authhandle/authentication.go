@@ -1,10 +1,12 @@
 package authhandle
 
+//go:generate mockgen -source=authentication.go -destination=../../../../tests/mocks/authmock.go
+
 import (
 	"URLShortener/auth"
-	logwith "URLShortener/internal/lib/logger/logWith"
-	"URLShortener/internal/lib/logger/sl"
 	"URLShortener/internal/storage"
+	"URLShortener/internal/utils"
+	logUtils "URLShortener/internal/utils/logger"
 	"URLShortener/models"
 	"URLShortener/validation"
 	"log/slog"
@@ -38,13 +40,13 @@ func New(log *slog.Logger, authUser AuthUser, authType string) http.HandlerFunc 
 				})
 			}
 
-			log = logwith.LogWith(log, op, r)
+			log = logUtils.LogWith(log, op, r)
 
 			var user *models.User
 			err := render.DecodeJSON(r.Body, &user)
 
 			if err != nil {
-				log.Error(storage.ErrFailedToDecode, sl.Err(err))
+				log.Error(storage.ErrFailedToDecode, logUtils.Err(err))
 
 				render.JSON(w, r, Response{
 					Status: http.StatusBadRequest,
@@ -58,7 +60,7 @@ func New(log *slog.Logger, authUser AuthUser, authType string) http.HandlerFunc 
 
 			hashedPassword, err := auth.HashPassword(user.Password)
 			if err != nil {
-				log.Error("failed to hash password", sl.Err(err))
+				log.Error("failed to hash password", logUtils.Err(err))
 
 				render.JSON(w, r, Response{
 					Status: http.StatusInternalServerError,
@@ -70,7 +72,7 @@ func New(log *slog.Logger, authUser AuthUser, authType string) http.HandlerFunc 
 
 			if err := validation.ValidationStruct(user); err != nil {
 
-				log.Error(storage.ErrValidation, sl.Err(err))
+				log.Error(storage.ErrValidation, logUtils.Err(err))
 
 				render.JSON(w, r, Response{
 					Status: http.StatusBadRequest,
@@ -84,7 +86,7 @@ func New(log *slog.Logger, authUser AuthUser, authType string) http.HandlerFunc 
 
 			u, err := authUser.SignUpUser(user)
 			if err != nil {
-				log.Error(storage.ErrSignUp, sl.Err(err))
+				log.Error(storage.ErrSignUp, logUtils.Err(err))
 
 				render.JSON(w, r, Response{
 					Status: http.StatusInternalServerError,
@@ -96,7 +98,7 @@ func New(log *slog.Logger, authUser AuthUser, authType string) http.HandlerFunc 
 
 			token, err := auth.CreateAndSetAuthCookie(u.Id, w)
 			if err != nil {
-				log.Error(storage.ErrCreatingSession, sl.Err(err))
+				log.Error(storage.ErrCreatingSession, logUtils.Err(err))
 
 				render.JSON(w, r, Response{
 					Status: http.StatusInternalServerError,
@@ -108,9 +110,8 @@ func New(log *slog.Logger, authUser AuthUser, authType string) http.HandlerFunc 
 
 			log.Info("user successfulyy registered", slog.Int64("id", u.Id))
 
-			render.JSON(w, r, Response{
-				Status: http.StatusCreated,
-				Token:  token,
+			utils.WriteJSON(w, r, http.StatusCreated, Response{
+				Token: token,
 			})
 		}
 
@@ -125,13 +126,13 @@ func New(log *slog.Logger, authUser AuthUser, authType string) http.HandlerFunc 
 				})
 			}
 
-			log = logwith.LogWith(log, op, r)
+			log = logUtils.LogWith(log, op, r)
 
 			var loginData *models.LoginData
 			err := render.DecodeJSON(r.Body, &loginData)
 
 			if err != nil {
-				log.Error(storage.ErrFailedToDecode, sl.Err(err))
+				log.Error(storage.ErrFailedToDecode, logUtils.Err(err))
 
 				render.JSON(w, r, Response{
 					Status: http.StatusBadRequest,
@@ -145,7 +146,7 @@ func New(log *slog.Logger, authUser AuthUser, authType string) http.HandlerFunc 
 
 			if err := validation.ValidationStruct(loginData); err != nil {
 
-				log.Error(storage.ErrValidation, sl.Err(err))
+				log.Error(storage.ErrValidation, logUtils.Err(err))
 
 				render.JSON(w, r, Response{
 					Status: http.StatusBadRequest,
@@ -157,7 +158,7 @@ func New(log *slog.Logger, authUser AuthUser, authType string) http.HandlerFunc 
 
 			user, err := authUser.SignInUser(loginData)
 			if err != nil {
-				log.Error(storage.ErrInvalidRequest, sl.Err(err))
+				log.Error(storage.ErrInvalidRequest, logUtils.Err(err))
 
 				render.JSON(w, r, Response{
 					Status: http.StatusBadRequest,
@@ -169,7 +170,7 @@ func New(log *slog.Logger, authUser AuthUser, authType string) http.HandlerFunc 
 
 			err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginData.Password))
 			if err != nil {
-				log.Error(storage.ErrInvalidCredentials, sl.Err(err))
+				log.Error(storage.ErrInvalidCredentials, logUtils.Err(err))
 
 				render.JSON(w, r, Response{
 					Status: http.StatusUnauthorized,
@@ -181,7 +182,7 @@ func New(log *slog.Logger, authUser AuthUser, authType string) http.HandlerFunc 
 
 			token, err := auth.CreateAndSetAuthCookie(user.Id, w)
 			if err != nil {
-				log.Error(storage.ErrCreatingSession, sl.Err(err))
+				log.Error(storage.ErrCreatingSession, logUtils.Err(err))
 
 				render.JSON(w, r, Response{
 					Status: http.StatusInternalServerError,
