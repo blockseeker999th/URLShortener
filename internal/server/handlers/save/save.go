@@ -1,13 +1,14 @@
 package save
 
 import (
-	"URLShortener/internal/storage"
-	"URLShortener/internal/utils"
-	logUtils "URLShortener/internal/utils/logger"
-	"URLShortener/validation"
 	"errors"
 	"log/slog"
 	"net/http"
+
+	"github.com/blockseeker999th/URLShortener/internal/storage"
+	"github.com/blockseeker999th/URLShortener/internal/utils"
+	logUtils "github.com/blockseeker999th/URLShortener/internal/utils/logger"
+	"github.com/blockseeker999th/URLShortener/validation"
 
 	"github.com/go-chi/render"
 )
