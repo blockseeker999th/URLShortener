@@ -5,7 +5,7 @@
 package mock_authhandle
 
 import (
-	models "URLShortener/models"
+	models "github.com/blockseeker999th/URLShortener/models"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"

@@ -1,19 +1,20 @@
 package main
 
 import (
-	"URLShortener/auth"
-	"URLShortener/internal/config"
-	"URLShortener/internal/server/handlers/authhandle"
-	"URLShortener/internal/server/handlers/deleteurl"
-	"URLShortener/internal/server/handlers/redirect"
-	"URLShortener/internal/server/handlers/save"
-	mwLogger "URLShortener/internal/server/middleware/logger"
-	"URLShortener/internal/storage"
-	database "URLShortener/internal/storage/db"
-	logUtils "URLShortener/internal/utils/logger"
 	"log/slog"
 	"net/http"
 	"os"
+
+	"github.com/blockseeker999th/URLShortener/auth"
+	"github.com/blockseeker999th/URLShortener/internal/config"
+	"github.com/blockseeker999th/URLShortener/internal/server/handlers/authhandle"
+	"github.com/blockseeker999th/URLShortener/internal/server/handlers/deleteurl"
+	"github.com/blockseeker999th/URLShortener/internal/server/handlers/redirect"
+	"github.com/blockseeker999th/URLShortener/internal/server/handlers/save"
+	mwLogger "github.com/blockseeker999th/URLShortener/internal/server/middleware/logger"
+	"github.com/blockseeker999th/URLShortener/internal/storage"
+	database "github.com/blockseeker999th/URLShortener/internal/storage/db"
+	logUtils "github.com/blockseeker999th/URLShortener/internal/utils/logger"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"

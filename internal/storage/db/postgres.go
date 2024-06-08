@@ -1,11 +1,12 @@
 package db
 
 import (
-	"URLShortener/internal/config"
 	"database/sql"
 	"errors"
 	"fmt"
 	"log"
+
+	"github.com/blockseeker999th/URLShortener/internal/config"
 
 	_ "github.com/lib/pq"
 )

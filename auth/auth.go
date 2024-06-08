@@ -1,8 +1,6 @@
 package auth
 
 import (
-	"URLShortener/internal/config"
-	logUtils "URLShortener/internal/utils"
 	"context"
 	"fmt"
 	"log/slog"
@@ -10,6 +8,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/blockseeker999th/URLShortener/internal/config"
+	logUtils "github.com/blockseeker999th/URLShortener/internal/utils"
 
 	"github.com/go-chi/render"
 	"github.com/golang-jwt/jwt"
