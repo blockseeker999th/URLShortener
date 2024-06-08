@@ -1,8 +1,6 @@
 package authhandle
 
 import (
-	"URLShortener/models"
-	mock_authhandle "URLShortener/tests/mocks"
 	"bytes"
 	"encoding/json"
 	"log/slog"
@@ -11,6 +9,10 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/blockseeker999th/URLShortener/models"
+
+	mock_authhandle "github.com/blockseeker999th/URLShortener/tests/mocks"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/golang/mock/gomock"

@@ -1,10 +1,11 @@
 package storage
 
 import (
-	"URLShortener/models"
 	"database/sql"
 	"errors"
 	"fmt"
+
+	"github.com/blockseeker999th/URLShortener/models"
 )
 
 var (

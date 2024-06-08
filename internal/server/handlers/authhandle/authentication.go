@@ -3,14 +3,15 @@ package authhandle
 //go:generate mockgen -source=authentication.go -destination=../../../../tests/mocks/authmock.go
 
 import (
-	"URLShortener/auth"
-	"URLShortener/internal/storage"
-	"URLShortener/internal/utils"
-	logUtils "URLShortener/internal/utils/logger"
-	"URLShortener/models"
-	"URLShortener/validation"
 	"log/slog"
 	"net/http"
+
+	"github.com/blockseeker999th/URLShortener/auth"
+	"github.com/blockseeker999th/URLShortener/internal/storage"
+	"github.com/blockseeker999th/URLShortener/internal/utils"
+	logUtils "github.com/blockseeker999th/URLShortener/internal/utils/logger"
+	"github.com/blockseeker999th/URLShortener/models"
+	"github.com/blockseeker999th/URLShortener/validation"
 
 	"github.com/go-chi/render"
 	"golang.org/x/crypto/bcrypt"
