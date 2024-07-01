@@ -28,7 +28,8 @@ type Config struct {
 func MustLoad() *Config {
 	err := godotenv.Load("./../../.env")
 	if err != nil {
-		fmt.Println("Error loading .env variables", err)
+		fmt.Printf("Error loading .env variables: %s", err)
+		panic("Failed to get config")
 	}
 
 	return &Config{
